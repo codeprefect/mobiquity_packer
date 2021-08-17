@@ -3,12 +3,12 @@ import path from 'path';
 import { Packer } from './packer';
 
 describe('Packer works!', () => {
-    test('pack should return input filePath', () => {
+    test('pack should return input filePath', async () => {
         // arrange
-        var filePath = "hello.txt";
+        var filePath = path.join(process.cwd(), 'resources/example_input');
 
         // act
-        var result = Packer.pack(filePath);
+        var result = await Packer.pack(filePath);
 
         // assert
         expect(result).toEqual(result);
@@ -16,10 +16,10 @@ describe('Packer works!', () => {
 
     test('pack should return expected result', async () => {
         // arrange
-        const filePath = 'resources/example_input';
+        const filePath = path.join(process.cwd(), 'resources/example_input');
 
         // act
-        var result = Packer.pack(path.join(__dirname, filePath));
+        var result = await Packer.pack(filePath);
 
         // assert
         var expected = await fs.readFile(filePath, {
@@ -27,5 +27,16 @@ describe('Packer works!', () => {
         });
 
         expect(result).toEqual(expected);
+    });
+
+    test('should try api error when file not exist', async () => {
+        // arrange
+        const filePath = path.join(process.cwd(), 'resources/hello');
+
+        // act
+        var result = () => Packer.pack(filePath);
+
+        // assert
+        expect(result).rejects.toThrow("file not accessible");
     });
 });
