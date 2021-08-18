@@ -76,18 +76,31 @@ export class Packer {
             // extract weight limit from line
             var step1 = line.split(":");
             var weightLimit = new Decimal(step1[0].trim());
+
+            if (weightLimit.greaterThan(100)) {
+                throw new ApiError("weightLimit should not exceed 100");
+            }
             // create an instance of package for current line
             // remove empty entries from items
             var items = step1[1].split(" ")
                 .filter(text => text != '' )
                 .map(item => {
                     var fields = item.slice(1,-1).split(',');
+                    var weight = new Decimal(fields[1].trim());
+                    var cost = new Decimal(fields[2].slice(1).trim());
+                    if (weight.greaterThan(100))
+                        throw new ApiError("item weight should not exceed 100");
+
+                    if (cost.greaterThan(100))
+                        throw new ApiError("item cost should not exceed €100");
                     return new Item(
                         parseInt(fields[0]), // convert to number for indexNumber
-                        new Decimal(fields[1].trim()), // convert to float for weight
-                        new Decimal(fields[2].slice(1).trim()) // convert to float for cost
+                        weight, // convert to float for weight
+                        cost // convert to float for cost
                     );
                 });
+
+            if (items.length > 15) throw new ApiError("items may not be more than 15");
             var pkg = new Package(weightLimit, items);
 
             // added composed packages to list of packages
