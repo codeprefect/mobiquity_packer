@@ -20,13 +20,7 @@ export class Packer {
     }
 
     private static bestPack(pkg: Package): string {
-        var eligibleItems = pkg.items.sort((a, b) => a.cost.lessThan(b.cost) ? 1
-            : (a.cost.greaterThan(b.cost) ? -1 // sort by cost in decending order
-                : (a.weight.greaterThan(b.weight) ? 1
-                    : (a.weight.lessThan(b.weight) ? -1 // then sort by weight in ascending order
-                        : 0))))
-            .filter((item, pos, ary) => item.weight.lessThan(pkg.weightLimit)
-                && (!pos || !(item.cost.equals(ary[pos - 1].cost) && Decimal.add(item.weight, ary[pos - 1].weight).greaterThan(pkg.weightLimit)))); // remove heavier item when equal cost and sum of weight exceed weight limit
+        var eligibleItems = this.getEligibleItems(pkg); // get sorted eligible items
 
         // initialize remaining capacity
         var remainingCapacity = pkg.weightLimit;
@@ -46,8 +40,25 @@ export class Packer {
         }
 
         // return '-' when there is no eligible item
-        return finalItems.length > 0 ? finalItems.sort((a, b) => a > b ? 1 : 0).join(',') : '-';
+        return this.getFinalItems(finalItems);
     }
+
+    private static getFinalItems = (finalItems: number[]): string =>
+        finalItems.length > 0 ? finalItems.sort((a, b) => a > b ? 1 : 0).join(',') : '-';
+
+    private static getEligibleItems = (pkg: Package): Item[] =>
+        Packer.getFilteredItems(pkg.items.sort(Packer.sortMethod), pkg.weightLimit);
+
+    private static sortMethod = (itemA: Item, itemB: Item): number =>
+        itemA.cost.lessThan(itemB.cost) ? 1
+            : (itemA.cost.greaterThan(itemB.cost) ? -1 // sort by cost in decending order
+                : (itemA.weight.greaterThan(itemB.weight) ? 1
+                    : (itemA.weight.lessThan(itemB.weight) ? -1 // then sort by weight in ascending order
+                        : 0)));
+
+    private static getFilteredItems = (sortedItems: Item[], weightLimit: Decimal): Item[] =>
+        sortedItems.filter((item, pos, ary) => item.weight.lessThan(weightLimit)
+                && (!pos || !(item.cost.equals(ary[pos - 1].cost) && Decimal.add(item.weight, ary[pos - 1].weight).greaterThan(weightLimit)))); // remove heavier item when equal cost and sum of weight exceed weight limit
 
     // ensure file exists and throw custom exception when not
     private static async ensureFileExists(filePath: string): Promise<void> {
@@ -77,31 +88,20 @@ export class Packer {
             var step1 = line.split(":");
             var weightLimit = new Decimal(step1[0].trim());
 
-            if (weightLimit.greaterThan(100)) {
-                throw new ApiError("weightLimit should not exceed 100");
-            }
+            // assert that weightLimit is valid
+            this.ensureValueIsWithinLimit(weightLimit, "weightLimit should not exceed 100");
+
             // create an instance of package for current line
             // remove empty entries from items
-            var items = step1[1].split(" ")
+            var pkg = new Package(weightLimit);
+            step1[1].split(" ")
                 .filter(text => text != '' )
-                .map(item => {
-                    var fields = item.slice(1,-1).split(',');
-                    var weight = new Decimal(fields[1].trim());
-                    var cost = new Decimal(fields[2].slice(1).trim());
-                    if (weight.greaterThan(100))
-                        throw new ApiError("item weight should not exceed 100");
-
-                    if (cost.greaterThan(100))
-                        throw new ApiError("item cost should not exceed €100");
-                    return new Item(
-                        parseInt(fields[0]), // convert to number for indexNumber
-                        weight, // convert to float for weight
-                        cost // convert to float for cost
-                    );
+                .forEach(item => {
+                    pkg.items.push(this.getItem(item));
                 });
 
-            if (items.length > 15) throw new ApiError("items may not be more than 15");
-            var pkg = new Package(weightLimit, items);
+            // assert that item length is within limit
+            this.ensureValueIsWithinLimit(pkg.items.length, "items may not be more than 15", 15);
 
             // added composed packages to list of packages
             packages.push(pkg);
@@ -109,5 +109,28 @@ export class Packer {
 
         // return list of packages derived from file
         return packages;
+    }
+
+    private static ensureValueIsWithinLimit(actualValue: number, error: string, limit: number): void;
+    private static ensureValueIsWithinLimit(actualValue: Decimal, error: string): void;
+    private static ensureValueIsWithinLimit(actualValue: Decimal | number, error: string,
+        limit: Decimal | number = new Decimal(100)) {
+        if ((new Decimal(actualValue)).greaterThan(limit)) {
+            throw new ApiError(error);
+        }
+    }
+
+    private static getItem(item: string): Item {
+        var fields = item.slice(1,-1).split(',');
+        var weight = new Decimal(fields[1].trim());
+        var cost = new Decimal(fields[2].slice(1).trim());
+        this.ensureValueIsWithinLimit(weight, "item weight should not exceed 100");
+        this.ensureValueIsWithinLimit(cost, "item cost should not exceed €100");
+
+        return new Item(
+            parseInt(fields[0]), // convert to number for indexNumber
+            weight, // convert to float for weight
+            cost // convert to float for cost
+        );
     }
 }
