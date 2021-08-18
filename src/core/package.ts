@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 import { Item } from "./item";
 
 /**
@@ -8,7 +9,7 @@ export class Package {
     /**
      * create a new package object
      */
-    constructor(public weightLimit: number, public items: Item[])
+    constructor(public weightLimit: Decimal, public items: Item[])
     {
     }
 }

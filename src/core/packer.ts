@@ -1,6 +1,7 @@
 import { createReadStream } from 'fs';
 import { access } from 'fs/promises';
 import { createInterface } from 'readline';
+import { Decimal } from 'decimal.js';
 import { ApiError } from './api_error';
 import { Item } from './item';
 import { Package } from './package';
@@ -10,16 +11,42 @@ export class Packer {
         // ensure file exists
         await this.ensureFileExists(filePath);
 
+        // read package into object
         var packages = await this.readPackages(filePath);
 
+        // calculate bestpack for each entry
         return packages.map(pack => this.bestPack(pack))
             .join('\n');
     }
 
     private static bestPack(pkg: Package): string {
-        console.log(pkg);
+        var eligibleItems = pkg.items.sort((a, b) => a.cost.lessThan(b.cost) ? 1
+            : (a.cost.greaterThan(b.cost) ? -1 // sort by cost in decending order
+                : (a.weight.greaterThan(b.weight) ? 1
+                    : (a.weight.lessThan(b.weight) ? -1 // then sort by weight in ascending order
+                        : 0))))
+            .filter((item, pos, ary) => item.weight.lessThan(pkg.weightLimit)
+                && (!pos || !(item.cost.equals(ary[pos - 1].cost) && Decimal.add(item.weight, ary[pos - 1].weight).greaterThan(pkg.weightLimit)))); // remove heavier item when equal cost and sum of weight exceed weight limit
+
+        // initialize remaining capacity
+        var remainingCapacity = pkg.weightLimit;
+
+        // initialize array to store indices of result
+        var finalItems: number[] = [];
+
+        // loop through sorted eligible items
+        for (var index = 0; index < eligibleItems.length; index++) {
+            var currItem = eligibleItems[index]; // get current item
+
+            // check if remaining capacity can allow item
+            if (remainingCapacity.greaterThanOrEqualTo(currItem.weight)) {
+                finalItems.push(currItem.index); // add item index to result store
+                remainingCapacity = remainingCapacity.sub(currItem.weight); // remove item weight from remaining capacity
+            }
+        }
+
         // return '-' when there is no eligible item
-        return '-';
+        return finalItems.length > 0 ? finalItems.sort((a, b) => a > b ? 1 : 0).join(',') : '-';
     }
 
     // ensure file exists and throw custom exception when not
@@ -48,7 +75,7 @@ export class Packer {
         for await (const line of rlInterface) {
             // extract weight limit from line
             var step1 = line.split(":");
-            var weightLimit = parseFloat(step1[0]);
+            var weightLimit = new Decimal(step1[0].trim());
             // create an instance of package for current line
             // remove empty entries from items
             var items = step1[1].split(" ")
@@ -57,8 +84,8 @@ export class Packer {
                     var fields = item.slice(1,-1).split(',');
                     return new Item(
                         parseInt(fields[0]), // convert to number for indexNumber
-                        parseFloat(fields[1]), // convert to float for weight
-                        parseFloat(fields[2].slice(1)) // convert to float for cost
+                        new Decimal(fields[1].trim()), // convert to float for weight
+                        new Decimal(fields[2].slice(1).trim()) // convert to float for cost
                     );
                 });
             var pkg = new Package(weightLimit, items);

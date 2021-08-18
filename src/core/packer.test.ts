@@ -17,12 +17,13 @@ describe('Packer works!', () => {
     test('pack should return expected result', async () => {
         // arrange
         const filePath = path.join(process.cwd(), 'resources/example_input');
+        const outFilePath = path.join(process.cwd(), 'resources/example_output');
 
         // act
         var result = await Packer.pack(filePath);
 
         // assert
-        var expected = await fs.readFile(filePath, {
+        var expected = await fs.readFile(outFilePath, {
             encoding: 'utf-8'
         });
 

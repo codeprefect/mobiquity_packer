@@ -30,6 +30,7 @@
     "typescript": "^4.3.5"
   },
   "dependencies": {
+    "decimal.js": "^10.3.1",
     "line-reader": "^0.4.0"
   }
 }
