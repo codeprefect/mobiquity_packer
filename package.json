@@ -1,6 +1,6 @@
 {
   "name": "@codeprefect/mobiquity-packer",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "a library to optimize packaging",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
