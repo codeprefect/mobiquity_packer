@@ -49,7 +49,7 @@ export class Packer {
     }
 
     private static getFinalItems = (finalItems: number[]): string =>
-        finalItems.length > 0 ? finalItems.sort((a, b) => a > b ? 1 : 0).join(',') : '-';
+        finalItems.length > 0 ? finalItems.sort().join(',') : '-';
 
     private static getEligibleItems = (pkg: Package): Item[] =>
         Packer.getFilteredItems(pkg.items.sort(Packer.sortMethod), pkg.weightLimit);
