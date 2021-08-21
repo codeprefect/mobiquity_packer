@@ -9,8 +9,14 @@ export class Package {
 
     /**
      * create a new package object
+     * @param {Decimal} weightLimit
      */
     constructor(weightLimit: Decimal);
+    /**
+     * create a new package object
+     * @param {Decimal} weightLimit
+     * @param {Item[]} items
+     */
     constructor(weightLimit: Decimal, items: Item[]);
     constructor(public weightLimit: Decimal, items?: Item[])
     {

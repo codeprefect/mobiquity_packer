@@ -28,7 +28,7 @@ describe('Packer works!', () => {
             encoding: 'utf-8'
         });
 
-        expect(result).toEqual(expected);
+        expect(result).toEqual(expected.trim());
     });
 
     test('should try api error when file not exist', async () => {

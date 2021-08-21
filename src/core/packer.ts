@@ -7,6 +7,11 @@ import { Item } from './item';
 import { Package } from './package';
 
 export class Packer {
+    /**
+     * pack the packages in filePath
+     * @param {string} filePath
+     * @returns {string} line formatted package
+     */
     static async pack(filePath: string): Promise<string> {
         // ensure file exists
         await this.ensureFileExists(filePath);
